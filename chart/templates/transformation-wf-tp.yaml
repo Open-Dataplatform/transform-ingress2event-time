@@ -27,6 +27,7 @@ spec:
     inputs:
       parameters:
       - name: date-string
+        default: ''
     container:
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
       workingDir: /app
