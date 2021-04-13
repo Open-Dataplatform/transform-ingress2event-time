@@ -5,7 +5,7 @@ image:
   tag: latest
 schedule: "*/15 * * * *"
 transformationparams:
-  datestring:
+  datestring: ""
 config:
   conf.ini: |
     [Logging]
