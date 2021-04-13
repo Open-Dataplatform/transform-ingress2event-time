@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: {{ .Values.appName }}-cron-wf
+  namespace: argo
+spec:
+  schedule: {{ .Values.schedule }}
+  concurrencyPolicy: "Allow"
+  startingDeadlineSeconds: 0
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
+  podGC:
+    strategy: OnWorkflowSuccess
+  workflowSpec:
+    entrypoint: cron-tasks
+    templates:
+    - name: cron-tasks
+      dag:
+        tasks:
+        - name: transform-ingress2event-time
+          templateRef:
+            name: {{ .Values.appName }}-wf-tp
+            template: transformation
+          arguments:
+            parameters:
+            - name: date-string
+              value: {{ .Values.transformationparams.datestring }}

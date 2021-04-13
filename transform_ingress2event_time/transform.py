@@ -11,6 +11,7 @@ from .configuration import Configuration
 
 configuration = Configuration(__file__)
 config = configuration.get_config()
+credentials_config = configuration.get_credentials_config()
 logger = configuration.get_logger()
 
 
@@ -26,9 +27,9 @@ def __get_pipeline() -> PipelineTimeSeries:
     account_url = config['Azure Storage']['account_url']
     filesystem_name = config['Azure Storage']['filesystem_name']
 
-    tenant_id = config['Authorization']['tenant_id']
-    client_id = config['Authorization']['client_id']
-    client_secret = config['Authorization']['client_secret']
+    tenant_id = credentials_config['Authorization']['tenant_id']
+    client_id = credentials_config['Authorization']['client_id']
+    client_secret = credentials_config['Authorization']['client_secret']
 
     source = config['Datasets']['source']
     destination = config['Datasets']['destination']
@@ -57,7 +58,7 @@ def main():
     argparser = __init_argparse()
     args = argparser.parse_args()
     pipeline = __get_pipeline()
-
+    logger.info('Running the ingress2event_time transformation.')
     try:
         if args.ingress_time:
             ingress_time = datetime.strptime(args.ingress_time, '%Y-%m-%dT%H')
@@ -68,6 +69,7 @@ def main():
         logger.error('Error occurred while running pipeline: %s', error)
         sys.exit(-1)
 
+    logger.info('Finished running the ingress2event_time transformation.')
 
 if __name__ == '__main__':
     main()

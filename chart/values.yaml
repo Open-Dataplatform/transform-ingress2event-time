@@ -1,0 +1,43 @@
+appName: osiris-transform-ingress2event-time
+environment: test
+image:
+  repository: transform-ingress2event-time
+  tag: latest
+schedule: "*/15 * * * *"
+transformationparams:
+  datestring:
+config:
+  conf.ini: |
+    [Logging]
+    configuration_file = log.conf
+    [Azure Storage]
+    account_url = https://<storage_account>.dfs.core.windows.net
+    filesystem_name = <container_name>
+    [Datasets]
+    source = <source_guid>
+    destination = <destination_guid>
+    date_format = %%Y-%%m-%%dT%%H:%%M:%%S.%%fZ
+    date_key_name = <field_name>
+  log.conf: |
+    [loggers]
+    keys=root
+    [handlers]
+    keys=consoleHandler,fileHandler
+    [formatters]
+    keys=fileFormatter,consoleFormatter
+    [logger_root]
+    level=DEBUG
+    handlers=consoleHandler
+    [handler_consoleHandler]
+    class=StreamHandler
+    formatter=consoleFormatter
+    args=(sys.stdout,)
+    [handler_fileHandler]
+    class=FileHandler
+    formatter=fileFormatter
+    args=('logfile.log',)
+    [formatter_fileFormatter]
+    format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+    datefmt=
+    [formatter_consoleFormatter]
+    format=%(levelname)s: %(name)s - %(message)s
