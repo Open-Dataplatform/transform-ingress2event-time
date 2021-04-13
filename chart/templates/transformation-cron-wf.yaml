@@ -21,4 +21,4 @@ spec:
           arguments:
             parameters:
             - name: date-string
-              value: {{ default "" .Values.transformationparams.datestring }}
+              value: {{ .Values.transformationparams.datestring }}
