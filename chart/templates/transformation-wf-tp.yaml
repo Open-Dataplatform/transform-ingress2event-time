@@ -30,7 +30,7 @@ spec:
     container:
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
       workingDir: /app
-      command: ["python", "-m", "transform_ingress2event_time/transform", "{{inputs.parameters.date-string}}"]
+      command: ["python", "-m", "transform_ingress2event_time/transform", "{{`{{inputs.parameters.date-string}}`}}"]
       volumeMounts:
         - name: transformation-cm
           mountPath: "/etc/osiris/"
