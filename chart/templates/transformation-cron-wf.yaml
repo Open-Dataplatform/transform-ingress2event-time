@@ -4,15 +4,15 @@ metadata:
   name: {{ .Values.appName }}-cron-wf
   namespace: argo
 spec:
-  schedule: {{ .Values.schedule | quote }}
+  schedule: "{{ .Values.schedule }}"
   concurrencyPolicy: "Allow"
   startingDeadlineSeconds: 0
   failedJobsHistoryLimit: 1
   successfulJobsHistoryLimit: 3
-  podGC:
-    strategy: OnWorkflowSuccess
   workflowSpec:
     entrypoint: cron-tasks
+    podGC:
+      strategy: OnWorkflowSuccess
     templates:
     - name: cron-tasks
       dag:
