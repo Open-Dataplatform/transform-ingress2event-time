@@ -6,13 +6,10 @@ metadata:
 spec:
   schedule: "{{ .Values.schedule }}"
   concurrencyPolicy: "Allow"
-  startingDeadlineSeconds: 0
   failedJobsHistoryLimit: 1
   successfulJobsHistoryLimit: 3
   workflowSpec:
     entrypoint: cron-tasks
-    podGC:
-      strategy: OnWorkflowSuccess
     templates:
     - name: cron-tasks
       dag:
@@ -24,4 +21,4 @@ spec:
           arguments:
             parameters:
             - name: date-string
-              value: {{ .Values.transformationparams.datestring }}
+              value: {{ default "" .Values.transformationparams.datestring }}
