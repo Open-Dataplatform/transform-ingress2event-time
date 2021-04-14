@@ -18,7 +18,9 @@ spec:
           templateRef:
             name: {{ .Values.appName }}-wf-tp
             template: transformation
+          {{- if .Values.transformationparams.datestring }}
           arguments:
             parameters:
             - name: date-string
               value: {{ .Values.transformationparams.datestring }}
+          {{- end }}
