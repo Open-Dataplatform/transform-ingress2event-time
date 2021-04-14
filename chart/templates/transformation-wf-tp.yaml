@@ -24,9 +24,11 @@ spec:
               client_id = {{ .Data.data.client_id }}
               secret = {{ .Data.data.secret }}
               {{- end -}}`}}
+    {{- if .Values.transformationparams.datestring }}
     inputs:
       parameters:
       - name: date-string
+    {{- end }}
     container:
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
       workingDir: /app
