@@ -16,8 +16,8 @@ spec:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.appName }}-authentication-reader"
         vault.hashicorp.com/auth-path: "auth/kubernetes-{{ .Values.environment }}"
-        vault.hashicorp.com/agent-inject-secret-azureauth.ini: "{{ .Values.appName }}-authentication/data/credentials"
-        vault.hashicorp.com/agent-inject-template-azureauth.ini: |
+        vault.hashicorp.com/agent-inject-secret-credentials.ini: "{{ .Values.appName }}-authentication/data/credentials"
+        vault.hashicorp.com/agent-inject-template-credentials.ini: |
           {{`{{-`}} with secret "{{ .Values.appName }}-authentication/data/credentials" {{`-}}`}}
               {{`[Authentication]
               authority = {{ .Data.data.authority }}
