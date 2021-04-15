@@ -22,7 +22,7 @@ spec:
               {{`[Authorization]
               tenant_id = {{ .Data.data.tenant_id }}
               client_id = {{ .Data.data.client_id }}
-              secret = {{ .Data.data.secret }}
+              client_secret = {{ .Data.data.secret }}
               {{- end -}}`}}
     {{- if .Values.transformationparams.datestring }}
     inputs:
