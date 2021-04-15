@@ -18,8 +18,8 @@ spec:
         vault.hashicorp.com/auth-path: "auth/kubernetes-{{ .Values.environment }}"
         vault.hashicorp.com/agent-inject-secret-azureauth.ini: "{{ .Values.appName }}-authentication/data/credentials"
         vault.hashicorp.com/agent-inject-template-azureauth.ini: |
-          {{`{{- with secret "{{ .Values.appName }}-authentication/data/credentials" -}}
-              [Authentication]
+          {{`{{-`}} with secret "{{ .Values.appName }}-authentication/data/credentials" {{`-}}`}}
+              {{`[Authentication]
               authority = {{ .Data.data.authority }}
               client_id = {{ .Data.data.client_id }}
               secret = {{ .Data.data.secret }}
