@@ -20,7 +20,7 @@ spec:
         vault.hashicorp.com/agent-inject-template-credentials.ini: |
           {{`{{-`}} with secret "{{ .Values.appName }}-authentication/data/credentials" {{`-}}`}}
               {{`[Authorization]
-              authority = {{ .Data.data.authority }}
+              tenant_id = {{ .Data.data.tenant_id }}
               client_id = {{ .Data.data.client_id }}
               secret = {{ .Data.data.secret }}
               {{- end -}}`}}
