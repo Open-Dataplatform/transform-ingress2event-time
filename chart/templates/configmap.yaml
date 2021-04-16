@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.appName }}-cm
+  namespace: argo
   labels:
     app: transformation
     component: ingress2event-time
