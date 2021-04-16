@@ -3,5 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Values.appName }}-cm
+  labels:
+    app: transformation
+    component: ingress2event-time
 data:
   {{- toYaml .Values.config | nindent 2 }}

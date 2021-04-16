@@ -3,6 +3,9 @@ kind: WorkflowTemplate
 metadata:
   name: {{ .Values.appName }}-wf-tp
   namespace: argo
+  labels:
+    app: transformation
+    component: ingress2event-time
 spec:
   entrypoint: transformation
   templates:

@@ -3,6 +3,9 @@ kind: CronWorkflow
 metadata:
   name: {{ .Values.appName }}-cron-wf
   namespace: argo
+  labels:
+    app: transformation
+    component: ingress2event-time
 spec:
   schedule: "{{ .Values.schedule }}"
   concurrencyPolicy: "Allow"
