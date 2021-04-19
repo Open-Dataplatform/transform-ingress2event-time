@@ -1,27 +1,28 @@
-## Osiris-egress-api Chart
+## Transform-ingress2event-time Chart
 
 ### Usage
 This chart comes unconfigured and will need to be configured with the following values to work.
 
 Undefined values:
-* ```deployment.image.repository```
-* ```ingress.host```
+```image.repository```
+```image.tag```
 
-There is also some values in the config file that needs to be configured for the application itself work propely, see [here](https://github.com/Open-Dataplatform/osiris-ingress-api/#configuration)
+There are some undefined values ```inside the config.conf.ini```
+The undefined values are:
+* ```filesystem_name ```
+* ```source```
+* ```destination```
+* ```date_key_name```
+
 
 ### Values
-
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `appName` | The overall name | osiris-egress
-| `deployment.replicas` | Number of nodes | 1
-| `deployment.image.repository` | The repository of the image | nil
-| `deployment.image.tag` | The tag of the image | latest
-| `service.type` | The type of service | ClusterIP
-| `ingress.enabled` | Enables ingress | false
-| `ingress.host` | Ingress accepted host | []
-| `ingress.path` | Ingress accepted path | /
-| `ingress.annotations` | Ingress annotations | ```nginx.ingress.kubernetes.io/rewrite-target: /$2, cert-manager.io/cluster-issuer: letsencrypt-prod, kubernetes.io/ingress.class: nginx```
-| `config.'conf.ini'` | Config for the app | see [here](https://github.com/Open-Dataplatform/osiris-ingress-api/#configuration)| 
-`config.'log.conf'` | Logging config for the app | see [here](https://github.com/Open-Dataplatform/osiris-ingress-api/#configuration)
+| `image.repository` | The repository of the image | nil
+| `image.tag` | The tag of the image | latest
+| `schedule` | Cron schedule | "*/15 * * * *"
+| `transformationparams.datestring` | The ingestion time / start time | empty string
+| `config.'conf.ini'` | Config for the app | see [here](https://github.com/Open-Dataplatform/osiris-ingress-api/#configuration)
+| `config.'log.conf'` | Logging config for the app | see [here](https://github.com/Open-Dataplatform/osiris-ingress-api/#configuration)
