@@ -14,6 +14,16 @@ This transformation takes data placed in an "ingress" dataset in regard to their
 an "egress" dataset with respect to their event time. The data is aggregated such that data is collected into a single
 file based on their date (timestamp excluded).
 
+The transformation takes data from the current time and the previous time and runs the transformation on this collection. 
+You can change the current ingesting time by providing a datetime as an argument to the transformation. Then the 
+transformation will process data from that hour and the previous hour
+
+### Usage
+```sh
+$ python -m transform-ingress2event-time.transform [--ingresss_time %Y-%m-%dT%H']
+```
+
+
 ## Configuration
 
 The application needs a configuration file `conf.ini` (see `conf.example.ini`) and a credentials file `credentials.ini`
