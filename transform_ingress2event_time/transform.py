@@ -6,7 +6,7 @@ import argparse
 import sys
 from datetime import datetime
 
-from osiris.pipeline_timeseries import PipelineTimeSeries
+from osiris.pipelines.pipeline_timeseries import PipelineTimeSeries
 from .configuration import Configuration
 
 configuration = Configuration(__file__)
