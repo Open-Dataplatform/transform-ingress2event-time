@@ -37,7 +37,7 @@ def __get_pipeline() -> PipelineTimeSeries:
     destination = config['Datasets']['destination']
     date_key_name = config['Datasets']['date_key_name']
     date_format = config['Datasets']['date_format']
-    time_resolution = TimeResolution(int(config['Datasets']['time_resolution']))
+    time_resolution = TimeResolution[config['Datasets']['time_resolution']]
 
     try:
         return PipelineTimeSeries(storage_account_url=account_url,
