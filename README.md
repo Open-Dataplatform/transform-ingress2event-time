@@ -44,6 +44,7 @@ source = <source_guid>
 destination = <destination_guid>
 date_format = %%Y-%%m-%%dT%%H:%%M:%%S.%%fZ
 date_key_name = <field_name>
+time_resolution = <time_resolution: YEAR, MONTH, DAY, HOUR, MINUTE>
 ```
 
 The credentials file must be placed in the root of the project or in the
