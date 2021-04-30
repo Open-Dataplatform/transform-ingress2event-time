@@ -6,7 +6,7 @@ import argparse
 import sys
 from datetime import datetime
 
-from osiris.pipelines.enums import TimeResolution
+from osiris.core.enums import TimeResolution
 from osiris.pipelines.pipeline_timeseries import PipelineTimeSeries
 
 from .configuration import Configuration
