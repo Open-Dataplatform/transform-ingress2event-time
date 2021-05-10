@@ -6,12 +6,12 @@ import argparse
 import sys
 from datetime import datetime
 
+from osiris.core.configuration import ConfigurationWithCredentials
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.pipeline_timeseries import PipelineTimeSeries
 
-from .configuration import Configuration
 
-configuration = Configuration(__file__)
+configuration = ConfigurationWithCredentials(__file__)
 config = configuration.get_config()
 credentials_config = configuration.get_credentials_config()
 logger = configuration.get_logger()
