@@ -18,7 +18,7 @@ spec:
         - key: name
           value: {{ .Values.appName }}
         - key: status
-          value: "{{status}}"    # Argo variable in `labels`
+          value: "{{`{{status}}`}}"    # Argo variable in `labels`
         counter:
           value: "1"
     volumes:
