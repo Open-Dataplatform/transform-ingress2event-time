@@ -10,6 +10,17 @@ spec:
   entrypoint: transformation
   templates:
   - name: transformation
+    metrics:
+      prometheus:
+      - name: result_counter
+        help: "Count of step execution by result status"
+        labels:
+        - key: name
+          value: {{ .Values.appName }}
+        - key: status
+          value: "{{status}}"    # Argo variable in `labels`
+        counter:
+          value: "1"
     volumes:
       - name: transformation-cm
         configMap:
