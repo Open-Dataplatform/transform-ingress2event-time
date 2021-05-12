@@ -5,7 +5,8 @@ metadata:
   namespace: argo
   labels:
     app: transformation
-    component: ingress2event-time
+    component: transformation
+    transformation: ingress2event-time 
 spec:
   entrypoint: transformation
   templates:
@@ -17,6 +18,8 @@ spec:
         labels:
         - key: name
           value: {{ .Values.appName }}
+        - key: component
+          value: "transformation"
         - key: status
           value: "{{`{{status}}`}}"    # Argo variable in `labels`
         counter:
