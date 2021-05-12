@@ -4,6 +4,7 @@ image:
   repository: transform-ingress2event-time
   tag: latest
 schedule: "*/15 * * * *"
+concurrencyPolicy: "Allow"
 transformationparams:
   datestring: ""
 config:
