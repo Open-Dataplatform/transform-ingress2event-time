@@ -17,11 +17,11 @@ spec:
     metadata:
       annotations:
         vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "{{ .Values.appName }}-authentication-reader"
+        vault.hashicorp.com/role: "{{ .Values.secretName }}-authentication-reader"
         vault.hashicorp.com/auth-path: "auth/kubernetes-{{ .Values.environment }}"
-        vault.hashicorp.com/agent-inject-secret-credentials.ini: "{{ .Values.appName }}-authentication/data/credentials"
+        vault.hashicorp.com/agent-inject-secret-credentials.ini: "{{ .Values.secretName }}-authentication/data/credentials"
         vault.hashicorp.com/agent-inject-template-credentials.ini: |
-          {{`{{-`}} with secret "{{ .Values.appName }}-authentication/data/credentials" {{`-}}`}}
+          {{`{{-`}} with secret "{{ .Values.secretName }}-authentication/data/credentials" {{`-}}`}}
               {{`[Authorization]
               tenant_id = {{ .Data.data.tenant_id }}
               client_id = {{ .Data.data.client_id }}

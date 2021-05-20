@@ -1,4 +1,5 @@
 appName: osiris-transform-ingress2event-time
+secretName: osiris-transform-ingress2event-time
 environment: test
 image:
   repository: transform-ingress2event-time
