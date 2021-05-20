@@ -60,11 +60,11 @@ def main():
     The main function which runs the transformation.
     """
     argparser = __init_argparse()
-    args = argparser.parse_args()
+    args, _ = argparser.parse_known_args()
     pipeline = __get_pipeline()
     logger.info('Running the ingress2event_time transformation.')
     try:
-        if args.ingress_time:
+        if args.ingress_time and args.ingress_time != '':
             ingress_time = datetime.strptime(args.ingress_time, '%Y-%m-%dT%H')
             pipeline.transform_ingest_time_to_event_time(ingress_time)
         else:
