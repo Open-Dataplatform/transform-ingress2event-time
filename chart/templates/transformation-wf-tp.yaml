@@ -11,9 +11,13 @@ spec:
   entrypoint: transformation
   templates:
   - name: transformation
+    inputs:
+      parameters:
+      - name: argument
+      - name: value
     metrics:
       prometheus:
-      - name: result_counter
+      - name: result_gauge
         help: "Count of step execution by result status"
         labels:
         - key: name
@@ -41,14 +45,9 @@ spec:
               client_id = {{ .Data.data.client_id }}
               client_secret = {{ .Data.data.secret }}
               {{- end -}}`}}
-    {{- if .Values.transformationparams.datestring }}
-    inputs:
-      parameters:
-      - name: date-string
-    {{- end }}
     container:
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-      command: ["python", "-m", "transform_ingress2event_time.transform" {{ if.Values.transformationparams.datestring }}, "{{`{{inputs.parameters.date-string}}`}}"{{ end }}]
+      command: ["python", "-m", "transform_ingress2event_time.transform", "{{`{{inputs.parameters.argument}}`}}", "{{`{{inputs.parameters.value}}`}}"]
       volumeMounts:
         - name: transformation-cm
           mountPath: "/etc/osiris/"

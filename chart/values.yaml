@@ -6,8 +6,6 @@ image:
   tag: latest
 schedule: "*/15 * * * *"
 concurrencyPolicy: "Allow"
-transformationparams:
-  datestring: ""
 config:
   conf.ini: |
     [Logging]
