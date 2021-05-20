@@ -8,7 +8,7 @@ metadata:
     component: ingress2event-time
 spec:
   schedule: "{{ .Values.schedule }}"
-  concurrencyPolicy: "Allow"
+  concurrencyPolicy: "{{ .Values.concurrencyPolicy }}"
   failedJobsHistoryLimit: 1
   successfulJobsHistoryLimit: 3
   workflowSpec:

@@ -5,11 +5,25 @@ metadata:
   namespace: argo
   labels:
     app: transformation
-    component: ingress2event-time
+    component: transformation
+    transformation: ingress2event-time 
 spec:
   entrypoint: transformation
   templates:
   - name: transformation
+    metrics:
+      prometheus:
+      - name: result_counter
+        help: "Count of step execution by result status"
+        labels:
+        - key: name
+          value: {{ .Values.appName }}
+        - key: component
+          value: "transformation"
+        - key: status
+          value: "{{`{{status}}`}}"    # Argo variable in `labels`
+        counter:
+          value: "1"
     volumes:
       - name: transformation-cm
         configMap:
