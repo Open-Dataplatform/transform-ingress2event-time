@@ -1,1 +1,2 @@
 osiris-sdk
+apache-beam
