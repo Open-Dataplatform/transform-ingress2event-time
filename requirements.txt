@@ -1,2 +1,4 @@
 osiris-sdk
 apache-beam
+pandas
+azure-storage-file-datalake
