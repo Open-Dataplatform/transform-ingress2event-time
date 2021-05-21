@@ -1,6 +1,6 @@
 """
 Transforms data structured in the filesystem according to the ingress time to the event time for the data.
-The data gets accumulated daily.
+The data gets accumulated based on the configured time resolution.
 """
 import argparse
 import sys
@@ -18,7 +18,8 @@ logger = configuration.get_logger()
 
 
 def __init_argparse() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description='Transform from ingress time to event time accumulated daily')
+    parser = argparse.ArgumentParser(description='Transform from ingress time to event time accumulated based on \
+                                                 on the configured time resolution')
 
     parser.add_argument('--ingress_time', type=str, default=None, help='the ingress time to start the ingress from.')
 
