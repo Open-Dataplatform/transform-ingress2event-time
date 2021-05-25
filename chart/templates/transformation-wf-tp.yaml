@@ -17,7 +17,7 @@ spec:
       - name: value
     metrics:
       prometheus:
-      - name: result_gauge
+      - name: result_counter
         help: "Count of step execution by result status"
         labels:
         - key: name
