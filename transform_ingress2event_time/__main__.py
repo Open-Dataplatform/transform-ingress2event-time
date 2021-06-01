@@ -39,6 +39,7 @@ def __get_pipeline() -> TransformIngestTime2EventTime:
     date_key_name = config['Datasets']['date_key_name']
     date_format = config['Datasets']['date_format']
     time_resolution = TimeResolution[config['Datasets']['time_resolution']]
+    max_files = int(config['Pipeline']['max_files'])
 
     try:
         return TransformIngestTime2EventTime(storage_account_url=account_url,
@@ -50,7 +51,8 @@ def __get_pipeline() -> TransformIngestTime2EventTime:
                                              destination_dataset_guid=destination,
                                              date_format=date_format,
                                              date_key_name=date_key_name,
-                                             time_resolution=time_resolution)
+                                             time_resolution=time_resolution,
+                                             max_files=max_files)
     except Exception as error:  # noqa pylint: disable=broad-except
         logger.error('Error occurred while initializing pipeline: %s', error)
         sys.exit(-1)

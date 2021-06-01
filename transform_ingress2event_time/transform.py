@@ -53,7 +53,7 @@ class TransformIngestTime2EventTime:
     # pylint: disable=too-many-arguments, too-many-instance-attributes, too-few-public-methods
     def __init__(self, storage_account_url: str, filesystem_name: str, tenant_id: str, client_id: str,
                  client_secret: str, source_dataset_guid: str, destination_dataset_guid: str, date_format: str,
-                 date_key_name: str, time_resolution: TimeResolution):
+                 date_key_name: str, time_resolution: TimeResolution, max_files: int):
         """
         :param storage_account_url: The URL to Azure storage account.
         :param filesystem_name: The name of the filesystem.
@@ -65,9 +65,11 @@ class TransformIngestTime2EventTime:
         :param date_format: The date format used in the time series.
         :param date_key_name: The key in the record containing the date.
         :param time_resolution: The time resolution to store the data in the destination dataset with.
+        :param max_files: Number of files to process in every pipeline run.
+
         """
         if None in [storage_account_url, filesystem_name, tenant_id, client_id, client_secret, source_dataset_guid,
-                    destination_dataset_guid, time_resolution, date_format, date_key_name]:
+                    destination_dataset_guid, time_resolution, date_format, date_key_name, max_files]:
             raise TypeError
 
         self.storage_account_url = storage_account_url
@@ -80,6 +82,7 @@ class TransformIngestTime2EventTime:
         self.time_resolution = time_resolution
         self.date_format = date_format
         self.date_key_name = date_key_name
+        self.max_files = max_files
 
     def transform(self, ingest_time: datetime = datetime.utcnow()):
         """
@@ -92,19 +95,29 @@ class TransformIngestTime2EventTime:
                             self.source_dataset_guid, self.destination_dataset_guid,
                             client_auth.get_credential_sync(), self.time_resolution)
 
-        datalake_connector = DatalakeFileSource(ingest_time, client_auth.get_credential_sync(),
-                                                self.storage_account_url, self.filesystem_name,
-                                                self.source_dataset_guid)
+        while True:
 
-        with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
-            _ = (
-                pipeline  # noqa
-                | 'read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x))  # noqa pylint: disable=unnecessary-lambda
-                | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
-                                                                                     self.date_format,  # noqa
-                                                                                     self.time_resolution))  # noqa
-                | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets))  # noqa
-                | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
-            )
+            datalake_connector = DatalakeFileSource(credential=client_auth.get_credential_sync(),
+                                                    account_url=self.storage_account_url,
+                                                    filesystem_name=self.filesystem_name,
+                                                    guid=self.source_dataset_guid,
+                                                    ingest_time=ingest_time,
+                                                    max_files=self.max_files)
+
+            if datalake_connector.estimate_size() == 0:
+                break
+
+            with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
+                _ = (
+                    pipeline  # noqa
+                    | 'read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
+                    | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x))  # noqa pylint: disable=unnecessary-lambda
+                    | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
+                                                                                         self.date_format,  # noqa
+                                                                                         self.time_resolution))  # noqa
+                    | 'Group by date' >> beam_core.GroupByKey()  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets))  # noqa
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
+                )
+
+            datalake_connector.close()
