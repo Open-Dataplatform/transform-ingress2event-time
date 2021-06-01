@@ -84,7 +84,7 @@ class TransformIngestTime2EventTime:
         self.date_key_name = date_key_name
         self.max_files = max_files
 
-    def transform(self, ingest_time: datetime = datetime.utcnow()):
+    def transform(self, ingest_time: datetime = None):
         """
         Creates a pipeline to transform from ingest time to event on a daily time.
         :param ingest_time: the ingest time to parse - default to current time
