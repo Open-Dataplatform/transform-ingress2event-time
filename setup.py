@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="osiris-transform-ingress2event-time",
+    name="osiris-transform-delfin-oilcable",
     packages=find_packages()
 )
