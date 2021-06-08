@@ -12,7 +12,6 @@ import apache_beam.transforms.core as beam_core
 from apache_beam.options.pipeline_options import PipelineOptions
 from azure.core.exceptions import ResourceNotFoundError
 
-from osiris.core.azure_client_authorization import ClientAuthorization
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
 from osiris.pipelines.file_io_connector import DatalakeFileSource
@@ -89,15 +88,20 @@ class TransformIngestTime2EventTime:
         Creates a pipeline to transform from ingest time to event on a daily time.
         :param ingest_time: the ingest time to parse - default to current time
         """
-        client_auth = ClientAuthorization(self.tenant_id, self.client_id, self.client_secret)
-
-        datasets = DataSets(self.storage_account_url, self.filesystem_name,
-                            self.source_dataset_guid, self.destination_dataset_guid,
-                            client_auth.get_credential_sync(), self.time_resolution)
+        datasets = DataSets(tenant_id=self.tenant_id,
+                            client_id=self.client_id,
+                            client_secret=self.client_secret,
+                            account_url=self.storage_account_url,
+                            filesystem_name=self.filesystem_name,
+                            source=self.source_dataset_guid,
+                            destination=self.destination_dataset_guid,
+                            time_resolution=self.time_resolution)
 
         while True:
 
-            datalake_connector = DatalakeFileSource(credential=client_auth.get_credential_sync(),
+            datalake_connector = DatalakeFileSource(tenant_id=self.tenant_id,
+                                                    client_id=self.client_id,
+                                                    client_secret=self.client_secret,
                                                     account_url=self.storage_account_url,
                                                     filesystem_name=self.filesystem_name,
                                                     guid=self.source_dataset_guid,
