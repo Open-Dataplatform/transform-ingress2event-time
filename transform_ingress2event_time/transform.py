@@ -125,3 +125,6 @@ class TransformIngestTime2EventTime:
                 )
 
             datalake_connector.close()
+
+            if ingest_time:
+                break
