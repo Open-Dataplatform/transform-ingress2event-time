@@ -98,19 +98,9 @@ format=%(levelname)s: %(name)s - %(message)s
 The application must be granted read access to the ingress dataset and write-access to the egress dataset on 
 [the Data Platform](https://dataplatform.energinet.dk/).
 
-Add the application you created earlier, using the `<YOUR APP NAME>` name, to the read- and write-access lists.
-
-
 ## Development
 
 ### Running locally
-The application can be run locally by using a supported application server, for example `uvicorn`.
-
-The following commands will install `uvicorn` and start serving the application locally.
-```
-pip install uvicorn==0.13.3
-uvicorn app.main:app --reload
-```
 
 ### tox
 
