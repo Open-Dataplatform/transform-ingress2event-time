@@ -83,9 +83,8 @@ class TransformIngestTime2EventTime:
         self.date_key_name = date_key_name
         self.max_files = max_files
 
-
     @staticmethod
-    def is_json(file):
+    def __is_json(file):
         filename = file[0]
         return filename[-4:] == 'json'
 
@@ -121,7 +120,7 @@ class TransformIngestTime2EventTime:
                 _ = (
                     pipeline  # noqa
                     | 'read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Filter JSON' >> beam.Filter(self.is_json)
+                    | 'Filter JSON' >> beam.Filter(self.__is_json)  # noqa
                     | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x[1]))  # noqa pylint: disable=unnecessary-lambda
                     | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
                                                                                          self.date_format,  # noqa
