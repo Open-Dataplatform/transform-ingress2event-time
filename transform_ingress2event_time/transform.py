@@ -14,7 +14,7 @@ from azure.core.exceptions import ResourceNotFoundError
 
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
-from osiris.pipelines.file_io_connector import DatalakeFileSource
+from osiris.pipelines.file_io_connector import DatalakeFileSourceWithFileName
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination
 
 
@@ -83,6 +83,12 @@ class TransformIngestTime2EventTime:
         self.date_key_name = date_key_name
         self.max_files = max_files
 
+
+    @staticmethod
+    def is_json(file):
+        filename = file[0]
+        return filename[-4:] == 'json'
+
     def transform(self, ingest_time: datetime = None):
         """
         Creates a pipeline to transform from ingest time to event on a daily time.
@@ -99,14 +105,14 @@ class TransformIngestTime2EventTime:
 
         while True:
 
-            datalake_connector = DatalakeFileSource(tenant_id=self.tenant_id,
-                                                    client_id=self.client_id,
-                                                    client_secret=self.client_secret,
-                                                    account_url=self.storage_account_url,
-                                                    filesystem_name=self.filesystem_name,
-                                                    guid=self.source_dataset_guid,
-                                                    ingest_time=ingest_time,
-                                                    max_files=self.max_files)
+            datalake_connector = DatalakeFileSourceWithFileName(tenant_id=self.tenant_id,
+                                                                client_id=self.client_id,
+                                                                client_secret=self.client_secret,
+                                                                account_url=self.storage_account_url,
+                                                                filesystem_name=self.filesystem_name,
+                                                                guid=self.source_dataset_guid,
+                                                                ingest_time=ingest_time,
+                                                                max_files=self.max_files)
 
             if datalake_connector.estimate_size() == 0:
                 break
@@ -115,7 +121,8 @@ class TransformIngestTime2EventTime:
                 _ = (
                     pipeline  # noqa
                     | 'read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x))  # noqa pylint: disable=unnecessary-lambda
+                    | 'Filter JSON' >> beam.Filter(self.is_json)
+                    | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x[1]))  # noqa pylint: disable=unnecessary-lambda
                     | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
