@@ -1,8 +1,10 @@
 """
 Module to handle pipeline for timeseries
 """
+import os
 from abc import ABC
 from datetime import datetime
+from io import BytesIO
 from typing import List, Tuple
 import json
 
@@ -23,10 +25,11 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
     Takes a list of events and join it with processed events, if such exists, for the particular event time.
     It will only keep unique pairs.
     """
-    def __init__(self, datasets: DataSets):
+    def __init__(self, datasets: DataSets, parquet_execution: bool):
         super().__init__()
 
         self.datasets = datasets
+        self.parquet_execution = parquet_execution
 
     def process(self, element, *args, **kwargs) -> List[Tuple]:
         """
@@ -35,14 +38,40 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
         date = pd.to_datetime(element[0])
         events = element[1]
         try:
-            processed_events = self.datasets.read_events_from_destination(date)
-            joined_events = events + processed_events
-            # Only keep unique elements in the list
-            joined_events = [i for n, i in enumerate(joined_events) if i not in joined_events[n + 1:]]
+            if self.parquet_execution:
+                processed_events = self.datasets.read_events_from_destination_parquet(date)
+            else:
+                processed_events = self.datasets.read_events_from_destination_json(date)
 
-            return [(date, joined_events)]
+            for event in events:
+                if event not in processed_events:
+                    processed_events.append(event)
+
+            return [(date, processed_events)]
         except ResourceNotFoundError:
             return [(date, events)]
+
+
+class _ConvertToDict(beam_core.DoFn, ABC):
+    """
+    Takes a list of events and converts them to a list of tuples (datetime, event)
+    """
+
+    def process(self, element, *args, **kwargs) -> List:
+        """
+        Overwrites beam.DoFn process.
+        """
+
+        path = element[0]
+        data = element[1]
+
+        _, file_extension = os.path.splitext(path)
+
+        if file_extension == '.json':
+            return [json.loads(data)]
+
+        dataframe = pd.read_parquet(BytesIO(data), engine='pyarrow')
+        return [dataframe.to_dict(orient='records')]
 
 
 class TransformIngestTime2EventTime:
@@ -52,7 +81,7 @@ class TransformIngestTime2EventTime:
     # pylint: disable=too-many-arguments, too-many-instance-attributes, too-few-public-methods
     def __init__(self, storage_account_url: str, filesystem_name: str, tenant_id: str, client_id: str,
                  client_secret: str, source_dataset_guid: str, destination_dataset_guid: str, date_format: str,
-                 date_key_name: str, time_resolution: TimeResolution, max_files: int):
+                 date_key_name: str, time_resolution: TimeResolution, max_files: int, parquet_execution: bool):
         """
         :param storage_account_url: The URL to Azure storage account.
         :param filesystem_name: The name of the filesystem.
@@ -65,6 +94,7 @@ class TransformIngestTime2EventTime:
         :param date_key_name: The key in the record containing the date.
         :param time_resolution: The time resolution to store the data in the destination dataset with.
         :param max_files: Number of files to process in every pipeline run.
+        :param parquet_execution: If it should do the transformation using parquet files instead of JSON.
 
         """
         if None in [storage_account_url, filesystem_name, tenant_id, client_id, client_secret, source_dataset_guid,
@@ -82,10 +112,13 @@ class TransformIngestTime2EventTime:
         self.date_format = date_format
         self.date_key_name = date_key_name
         self.max_files = max_files
+        self.parquet_execution = parquet_execution
 
-    @staticmethod
-    def __is_json(file):
+    def __filter_files(self, file):
         filename = file[0]
+        if self.parquet_execution:
+            return filename[-4:] != 'json'
+
         return filename[-4:] == 'json'
 
     def transform(self, ingest_time: datetime = None):
@@ -119,15 +152,15 @@ class TransformIngestTime2EventTime:
             with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
                 _ = (
                     pipeline  # noqa
-                    | 'read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Filter JSON' >> beam.Filter(self.__is_json)  # noqa
-                    | 'Convert from JSON' >> beam_core.Map(lambda x: json.loads(x[1]))  # noqa pylint: disable=unnecessary-lambda
+                    | 'Read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
+                    | 'Filter files based on extension' >> beam_core.Filter(self.__filter_files) # noqa
+                    | 'Convert to dict' >> beam_core.ParDo(_ConvertToDict())  # noqa
                     | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets))  # noqa
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets, self.parquet_execution))  # noqa
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets, self.parquet_execution))  # noqa
                 )
 
             datalake_connector.close()
