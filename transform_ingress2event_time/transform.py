@@ -36,7 +36,12 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
         Overwrites beam.DoFn process.
         """
         date = pd.to_datetime(element[0])
-        events = element[1]
+        # we make sure there is no duplicates.
+        events = []
+        for event in element[1]:
+            if event not in events:
+                events.append(event)
+
         try:
             if self.parquet_execution:
                 processed_events = self.datasets.read_events_from_destination_parquet(date)
