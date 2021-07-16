@@ -1,12 +1,9 @@
 """
 Module to handle pipeline for timeseries
 """
-import os
 from abc import ABC
 from datetime import datetime
-from io import BytesIO
 from typing import List, Tuple
-import json
 
 import pandas as pd
 import apache_beam as beam
@@ -17,7 +14,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
 from osiris.pipelines.file_io_connector import DatalakeFileSourceWithFileName
-from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination
+from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, _ConvertToDict
 
 
 class _JoinUniqueEventData(beam_core.DoFn, ABC):
@@ -55,29 +52,6 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
             return [(date, processed_events)]
         except ResourceNotFoundError:
             return [(date, events)]
-
-
-class _ConvertToDict(beam_core.DoFn, ABC):
-    """
-    Takes a list of events and converts them to a list of tuples (datetime, event)
-    """
-
-    def process(self, element, *args, **kwargs) -> List:
-        """
-        Overwrites beam.DoFn process.
-        """
-
-        path = element[0]
-        data = element[1]
-
-        _, file_extension = os.path.splitext(path)
-
-        if file_extension == '.json':
-            return [json.loads(data)]
-
-        dataframe = pd.read_parquet(BytesIO(data), engine='pyarrow')
-        # It would be better to use records.to_dict, but pandas uses narray type which JSONResponse can't handle.
-        return [json.loads(dataframe.to_json(orient='records'))]
 
 
 class TransformIngestTime2EventTime:
@@ -159,7 +133,7 @@ class TransformIngestTime2EventTime:
                 _ = (
                     pipeline  # noqa
                     | 'Read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Filter files based on extension' >> beam_core.Filter(self.__filter_files) # noqa
+                    | 'Filter files based on extension' >> beam_core.Filter(self.__filter_files)  # noqa
                     | 'Convert to dict' >> beam_core.ParDo(_ConvertToDict())  # noqa
                     | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
                                                                                          self.date_format,  # noqa

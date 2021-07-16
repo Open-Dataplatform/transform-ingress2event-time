@@ -41,7 +41,7 @@ def __get_pipeline() -> TransformIngestTime2EventTime:
     time_resolution = TimeResolution[config['Datasets']['time_resolution']]
     max_files = int(config['Pipeline']['max_files'])
 
-    parquet_execution = config['Pipeline'].getboolean('parquet_execution', fallback=False)
+    parquet_execution = config['Pipeline'].getboolean('parquet_execution', fallback=True)
 
     try:
         return TransformIngestTime2EventTime(storage_account_url=account_url,
