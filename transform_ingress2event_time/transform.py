@@ -76,7 +76,8 @@ class _ConvertToDict(beam_core.DoFn, ABC):
             return [json.loads(data)]
 
         dataframe = pd.read_parquet(BytesIO(data), engine='pyarrow')
-        return [dataframe.to_dict(orient='records')]
+        # It would be better to use records.to_dict, but pandas uses narray type which JSONResponse can't handle.
+        return [json.loads(dataframe.to_json(orient='records'))]
 
 
 class TransformIngestTime2EventTime:
@@ -164,8 +165,10 @@ class TransformIngestTime2EventTime:
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets, self.parquet_execution))  # noqa
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets, self.parquet_execution))  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets,  # noqa
+                                                                                   self.parquet_execution))
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets,  # noqa
+                                                                                      self.parquet_execution))
                 )
 
             datalake_connector.close()
