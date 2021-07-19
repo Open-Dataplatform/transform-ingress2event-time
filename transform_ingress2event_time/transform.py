@@ -14,7 +14,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
 from osiris.pipelines.file_io_connector import DatalakeFileSourceWithFileName
-from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, _ConvertToDict
+from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
 
 
 class _JoinUniqueEventData(beam_core.DoFn, ABC):
@@ -22,11 +22,10 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
     Takes a list of events and join it with processed events, if such exists, for the particular event time.
     It will only keep unique pairs.
     """
-    def __init__(self, datasets: DataSets, parquet_execution: bool):
+    def __init__(self, datasets: DataSets):
         super().__init__()
 
         self.datasets = datasets
-        self.parquet_execution = parquet_execution
 
     def process(self, element, *args, **kwargs) -> List[Tuple]:
         """
@@ -40,10 +39,7 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
                 events.append(event)
 
         try:
-            if self.parquet_execution:
-                processed_events = self.datasets.read_events_from_destination_parquet(date)
-            else:
-                processed_events = self.datasets.read_events_from_destination_json(date)
+            processed_events = self.datasets.read_events_from_destination_parquet(date)
 
             for event in events:
                 if event not in processed_events:
@@ -61,7 +57,7 @@ class TransformIngestTime2EventTime:
     # pylint: disable=too-many-arguments, too-many-instance-attributes, too-few-public-methods
     def __init__(self, storage_account_url: str, filesystem_name: str, tenant_id: str, client_id: str,
                  client_secret: str, source_dataset_guid: str, destination_dataset_guid: str, date_format: str,
-                 date_key_name: str, time_resolution: TimeResolution, max_files: int, parquet_execution: bool):
+                 date_key_name: str, time_resolution: TimeResolution, max_files: int):
         """
         :param storage_account_url: The URL to Azure storage account.
         :param filesystem_name: The name of the filesystem.
@@ -74,8 +70,6 @@ class TransformIngestTime2EventTime:
         :param date_key_name: The key in the record containing the date.
         :param time_resolution: The time resolution to store the data in the destination dataset with.
         :param max_files: Number of files to process in every pipeline run.
-        :param parquet_execution: If it should do the transformation using parquet files instead of JSON.
-
         """
         if None in [storage_account_url, filesystem_name, tenant_id, client_id, client_secret, source_dataset_guid,
                     destination_dataset_guid, time_resolution, date_format, date_key_name, max_files]:
@@ -92,14 +86,6 @@ class TransformIngestTime2EventTime:
         self.date_format = date_format
         self.date_key_name = date_key_name
         self.max_files = max_files
-        self.parquet_execution = parquet_execution
-
-    def __filter_files(self, file):
-        filename = file[0]
-        if self.parquet_execution:
-            return filename[-4:] != 'json'
-
-        return filename[-4:] == 'json'
 
     def transform(self, ingest_time: datetime = None):
         """
@@ -133,16 +119,13 @@ class TransformIngestTime2EventTime:
                 _ = (
                     pipeline  # noqa
                     | 'Read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Filter files based on extension' >> beam_core.Filter(self.__filter_files)  # noqa
-                    | 'Convert to dict' >> beam_core.ParDo(_ConvertToDict())  # noqa
+                    | 'Convert to dict' >> beam_core.ParDo(ConvertToDict())  # noqa
                     | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets,  # noqa
-                                                                                   self.parquet_execution))
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets,  # noqa
-                                                                                      self.parquet_execution))
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets))  # noqa
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
                 )
 
             datalake_connector.close()
