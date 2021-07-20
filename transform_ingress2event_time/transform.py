@@ -90,7 +90,7 @@ class TransformIngestTime2EventTime:
     def transform(self, ingest_time: datetime = None):
         """
         Creates a pipeline to transform from ingest time to event on a daily time.
-        :param ingest_time: the ingest time to parse - default to current time
+        :param ingest_time: the ingest time to parse - default to current time.
         """
         datasets = DataSets(tenant_id=self.tenant_id,
                             client_id=self.client_id,
