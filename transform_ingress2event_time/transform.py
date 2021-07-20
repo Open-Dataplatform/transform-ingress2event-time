@@ -13,7 +13,7 @@ from azure.core.exceptions import ResourceNotFoundError
 
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
-from osiris.pipelines.file_io_connector import DatalakeFileSourceWithFileName
+from osiris.pipelines.file_io_connector import DatalakeFileSource
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
 
 
@@ -103,14 +103,14 @@ class TransformIngestTime2EventTime:
 
         while True:
 
-            datalake_connector = DatalakeFileSourceWithFileName(tenant_id=self.tenant_id,
-                                                                client_id=self.client_id,
-                                                                client_secret=self.client_secret,
-                                                                account_url=self.storage_account_url,
-                                                                filesystem_name=self.filesystem_name,
-                                                                guid=self.source_dataset_guid,
-                                                                ingest_time=ingest_time,
-                                                                max_files=self.max_files)
+            datalake_connector = DatalakeFileSource(tenant_id=self.tenant_id,
+                                                    client_id=self.client_id,
+                                                    client_secret=self.client_secret,
+                                                    account_url=self.storage_account_url,
+                                                    filesystem_name=self.filesystem_name,
+                                                    guid=self.source_dataset_guid,
+                                                    ingest_time=ingest_time,
+                                                    max_files=self.max_files)
 
             if datalake_connector.estimate_size() == 0:
                 break
