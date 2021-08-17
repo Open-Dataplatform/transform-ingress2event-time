@@ -10,6 +10,7 @@ import apache_beam as beam
 import apache_beam.transforms.core as beam_core
 from apache_beam.options.pipeline_options import PipelineOptions
 from azure.core.exceptions import ResourceNotFoundError
+from osiris.core.azure_client_authorization import ClientAuthorization
 
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
@@ -92,9 +93,11 @@ class TransformIngestTime2EventTime:
         Creates a pipeline to transform from ingest time to event on a daily time.
         :param ingest_time: the ingest time to parse - default to current time.
         """
-        datasets = DataSets(tenant_id=self.tenant_id,
-                            client_id=self.client_id,
-                            client_secret=self.client_secret,
+        client_auth = ClientAuthorization(tenant_id=self.tenant_id,
+                                          client_id=self.client_id,
+                                          client_secret=self.client_secret)
+
+        datasets = DataSets(client_auth=client_auth,
                             account_url=self.storage_account_url,
                             filesystem_name=self.filesystem_name,
                             source=self.source_dataset_guid,
@@ -103,9 +106,7 @@ class TransformIngestTime2EventTime:
 
         while True:
 
-            datalake_connector = DatalakeFileSource(tenant_id=self.tenant_id,
-                                                    client_id=self.client_id,
-                                                    client_secret=self.client_secret,
+            datalake_connector = DatalakeFileSource(client_auth.get_local_copy(),
                                                     account_url=self.storage_account_url,
                                                     filesystem_name=self.filesystem_name,
                                                     guid=self.source_dataset_guid,
