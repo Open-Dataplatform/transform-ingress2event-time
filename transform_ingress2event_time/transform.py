@@ -11,11 +11,16 @@ import apache_beam.transforms.core as beam_core
 from apache_beam.options.pipeline_options import PipelineOptions
 from azure.core.exceptions import ResourceNotFoundError
 from osiris.core.azure_client_authorization import ClientAuthorization
+from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
 from osiris.pipelines.azure_data_storage import DataSets
 from osiris.pipelines.file_io_connector import DatalakeFileSource
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
+
+
+configuration = Configuration(__file__)
+logger = configuration.get_logger()
 
 
 class _JoinUniqueEventData(beam_core.DoFn, ABC):
@@ -93,6 +98,7 @@ class TransformIngestTime2EventTime:
         Creates a pipeline to transform from ingest time to event on a daily time.
         :param ingest_time: the ingest time to parse - default to current time.
         """
+        logger.info('Initializing TransformIngestTime2EventTime.transform')
         client_auth = ClientAuthorization(tenant_id=self.tenant_id,
                                           client_id=self.client_id,
                                           client_secret=self.client_secret)
@@ -105,6 +111,7 @@ class TransformIngestTime2EventTime:
                             time_resolution=self.time_resolution)
 
         while True:
+            logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
 
             datalake_connector = DatalakeFileSource(client_auth.get_local_copy(),
                                                     account_url=self.storage_account_url,
@@ -114,6 +121,7 @@ class TransformIngestTime2EventTime:
                                                     max_files=self.max_files)
 
             if datalake_connector.estimate_size() == 0:
+                logger.info('TransformIngestTime2EventTime.transform: break while-loop')
                 break
 
             with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
@@ -129,6 +137,7 @@ class TransformIngestTime2EventTime:
                     | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
                 )
 
+            logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
             datalake_connector.close()
 
             if ingest_time:

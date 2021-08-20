@@ -68,9 +68,11 @@ def main():
     logger.info('Running the ingress2event_time transformation.')
     try:
         if args.ingress_time and args.ingress_time != '':
+            logger.info('Running ingress_time: %s', args.ingress_time)
             ingress_time = datetime.strptime(args.ingress_time, '%Y-%m-%dT%H')
             pipeline.transform(ingress_time)
         else:
+            logger.info('Running default')
             pipeline.transform()
     except Exception as error:  # noqa pylint: disable=broad-except
         logger.error('Error occurred while running pipeline: %s', error)
