@@ -1,8 +1,10 @@
 """
 Module to handle pipeline for timeseries
 """
+import json
 from abc import ABC
 from datetime import datetime
+from io import BytesIO
 from typing import List, Tuple
 
 import pandas as pd
@@ -14,7 +16,8 @@ from osiris.core.azure_client_authorization import ClientAuthorization
 from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
-from osiris.pipelines.azure_data_storage import DataSets
+from osiris.core.io import get_file_path_with_respect_to_time_resolution
+from osiris.pipelines.azure_data_storage import Dataset
 from osiris.pipelines.file_io_connector import DatalakeFileSource
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
 
@@ -28,10 +31,11 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
     Takes a list of events and join it with processed events, if such exists, for the particular event time.
     It will only keep unique pairs.
     """
-    def __init__(self, datasets: DataSets):
+    def __init__(self, datasets: Dataset, time_resolution: TimeResolution):
         super().__init__()
 
         self.datasets = datasets
+        self.time_resolution = time_resolution
 
     def process(self, element, *args, **kwargs) -> List[Tuple]:
         """
@@ -45,7 +49,10 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
                 events.append(event)
 
         try:
-            processed_events = self.datasets.read_events_from_destination_parquet(date)
+            file_path = get_file_path_with_respect_to_time_resolution(date, self.time_resolution, 'data.parquet')
+            file_content = self.datasets.read_file(file_path)
+            processed_events_df = pd.read_parquet(BytesIO(file_content), engine='pyarrow')
+            processed_events = json.loads(processed_events_df.to_json(orient='records'))
 
             for event in events:
                 if event not in processed_events:
@@ -103,12 +110,10 @@ class TransformIngestTime2EventTime:
                                           client_id=self.client_id,
                                           client_secret=self.client_secret)
 
-        datasets = DataSets(client_auth=client_auth,
-                            account_url=self.storage_account_url,
-                            filesystem_name=self.filesystem_name,
-                            source=self.source_dataset_guid,
-                            destination=self.destination_dataset_guid,
-                            time_resolution=self.time_resolution)
+        dataset = Dataset(client_auth=client_auth,
+                          account_url=self.storage_account_url,
+                          filesystem_name=self.filesystem_name,
+                          guid=self.destination_dataset_guid)
 
         while True:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
@@ -133,8 +138,10 @@ class TransformIngestTime2EventTime:
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(datasets))  # noqa
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(datasets))  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(dataset,  # noqa
+                                                                                   self.time_resolution))  # noqa
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(dataset, # noqa
+                                                                                      self.time_resolution))  # noqa
                 )
 
             logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
