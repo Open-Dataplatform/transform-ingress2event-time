@@ -18,7 +18,7 @@ from osiris.core.configuration import Configuration
 from osiris.core.enums import TimeResolution
 from osiris.core.io import get_file_path_with_respect_to_time_resolution
 from osiris.pipelines.azure_data_storage import Dataset
-from osiris.pipelines.file_io_connector import DatalakeFileSource
+from osiris.pipelines.file_io_connector import DatalakeFileSource, FileBatchController
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
 
 
@@ -118,12 +118,17 @@ class TransformIngestTime2EventTime:
         while True:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
 
+            file_batch_controller = FileBatchController(client_auth.get_local_copy(),
+                                                        account_url=self.storage_account_url,
+                                                        filesystem_name=self.filesystem_name,
+                                                        guid=self.source_dataset_guid,
+                                                        ingest_time=ingest_time,
+                                                        max_files=self.max_files)
+
             datalake_connector = DatalakeFileSource(client_auth.get_local_copy(),
                                                     account_url=self.storage_account_url,
                                                     filesystem_name=self.filesystem_name,
-                                                    guid=self.source_dataset_guid,
-                                                    ingest_time=ingest_time,
-                                                    max_files=self.max_files)
+                                                    file_paths=file_batch_controller.get_batch())
 
             if datalake_connector.estimate_size() == 0:
                 logger.info('TransformIngestTime2EventTime.transform: break while-loop')
@@ -145,7 +150,7 @@ class TransformIngestTime2EventTime:
                 )
 
             logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
-            datalake_connector.close()
+            file_batch_controller.save_state()
 
             if ingest_time:
                 break
