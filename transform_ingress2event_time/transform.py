@@ -110,10 +110,10 @@ class TransformIngestTime2EventTime:
                                           client_id=self.client_id,
                                           client_secret=self.client_secret)
 
-        dataset = Dataset(client_auth=client_auth,
-                          account_url=self.storage_account_url,
-                          filesystem_name=self.filesystem_name,
-                          guid=self.destination_dataset_guid)
+        dataset_destination = Dataset(client_auth=client_auth,
+                                      account_url=self.storage_account_url,
+                                      filesystem_name=self.filesystem_name,
+                                      guid=self.destination_dataset_guid)
 
         while True:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
@@ -125,9 +125,10 @@ class TransformIngestTime2EventTime:
                                                         ingest_time=ingest_time,
                                                         max_files=self.max_files)
 
-            datalake_connector = DatalakeFileSource(client_auth.get_local_copy(),
-                                                    account_url=self.storage_account_url,
-                                                    filesystem_name=self.filesystem_name,
+            datalake_connector = DatalakeFileSource(Dataset(client_auth.get_local_copy(),
+                                                            account_url=self.storage_account_url,
+                                                            filesystem_name=self.filesystem_name,
+                                                            guid=self.source_dataset_guid),
                                                     file_paths=file_batch_controller.get_batch())
 
             if datalake_connector.estimate_size() == 0:
@@ -143,9 +144,9 @@ class TransformIngestTime2EventTime:
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(dataset,  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(dataset_destination,  # noqa
                                                                                    self.time_resolution))  # noqa
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(dataset, # noqa
+                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(dataset_destination, # noqa
                                                                                       self.time_resolution))  # noqa
                 )
 
