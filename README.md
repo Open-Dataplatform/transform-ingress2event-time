@@ -16,7 +16,7 @@ file based on their date (timestamp excluded).
 
 The transformation takes data from the current time and the previous time and runs the transformation on this collection. 
 You can change the current ingesting time by providing a datetime as an argument to the transformation. Then the 
-transformation will process data from that hour and the previous hour
+transformation will process data from that hour and the previous hour.
 
 ### Usage
 ```sh
