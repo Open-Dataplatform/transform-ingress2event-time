@@ -136,7 +136,7 @@ $ tox -e flake8
 
 #### Tests
 
-(No test at the moment)
+(No test at the moment - but should be added)
 
 Run unit tests.
 
