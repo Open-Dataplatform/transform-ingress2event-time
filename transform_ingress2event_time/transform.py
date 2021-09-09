@@ -5,7 +5,7 @@ import json
 from abc import ABC
 from datetime import datetime
 from io import BytesIO
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import pandas as pd
 import apache_beam as beam
@@ -16,7 +16,7 @@ from osiris.core.azure_client_authorization import ClientAuthorization
 from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
-from osiris.core.io import get_file_path_with_respect_to_time_resolution
+from osiris.core.io import get_file_path_with_respect_to_time_resolution, PrometheusClient
 from osiris.pipelines.azure_data_storage import Dataset
 from osiris.pipelines.file_io_connector import DatalakeFileSource, FileBatchController
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
@@ -70,7 +70,8 @@ class TransformIngestTime2EventTime:
     # pylint: disable=too-many-arguments, too-many-instance-attributes, too-few-public-methods
     def __init__(self, storage_account_url: str, filesystem_name: str, tenant_id: str, client_id: str,
                  client_secret: str, source_dataset_guid: str, destination_dataset_guid: str, date_format: str,
-                 date_key_name: str, time_resolution: TimeResolution, max_files: int):
+                 date_key_name: str, time_resolution: TimeResolution, max_files: int,
+                 prometheus_client: Optional[PrometheusClient] = None):
         """
         :param storage_account_url: The URL to Azure storage account.
         :param filesystem_name: The name of the filesystem.
@@ -83,6 +84,7 @@ class TransformIngestTime2EventTime:
         :param date_key_name: The key in the record containing the date.
         :param time_resolution: The time resolution to store the data in the destination dataset with.
         :param max_files: Number of files to process in every pipeline run.
+        :param prometheus_client: An optional Prometheus Client to generate metrics
         """
         if None in [storage_account_url, filesystem_name, tenant_id, client_id, client_secret, source_dataset_guid,
                     destination_dataset_guid, time_resolution, date_format, date_key_name, max_files]:
@@ -99,6 +101,7 @@ class TransformIngestTime2EventTime:
         self.date_format = date_format
         self.date_key_name = date_key_name
         self.max_files = max_files
+        self.prometheus_client = prometheus_client
 
     def transform(self, ingest_time: datetime = None):
         """
@@ -113,12 +116,14 @@ class TransformIngestTime2EventTime:
         dataset_source = Dataset(client_auth=client_auth.get_local_copy(),
                                  account_url=self.storage_account_url,
                                  filesystem_name=self.filesystem_name,
-                                 guid=self.source_dataset_guid)
+                                 guid=self.source_dataset_guid,
+                                 prometheus_client=self.prometheus_client)
 
         dataset_destination = Dataset(client_auth=client_auth.get_local_copy(),
                                       account_url=self.storage_account_url,
                                       filesystem_name=self.filesystem_name,
-                                      guid=self.destination_dataset_guid)
+                                      guid=self.destination_dataset_guid,
+                                      prometheus_client=self.prometheus_client)
 
         while True:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
