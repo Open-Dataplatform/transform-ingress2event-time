@@ -29,7 +29,7 @@ $ python -m transform_ingress2event_time.transform [--ingresss_time %Y-%m-%dT%H'
 The application needs a configuration file `conf.ini` (see `conf.example.ini`) and a credentials file `credentials.ini`
 (see `credentials.example.ini`). 
 The configuration file must  be placed in the root of the project or in the locations `/etc/osiris/conf.ini` or 
-`/etc/transform-ingress2event-time-conf.ini`. 
+`/etc/transform-ingress2event-time-conf.ini`
 
 ```
 [Logging]
