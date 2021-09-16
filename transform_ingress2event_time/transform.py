@@ -3,7 +3,6 @@ Module to handle pipeline for timeseries
 """
 import json
 from abc import ABC
-from datetime import datetime
 from io import BytesIO
 from typing import List, Tuple, Optional
 
@@ -103,7 +102,7 @@ class TransformIngestTime2EventTime:
         self.max_files = max_files
         self.prometheus_client = prometheus_client
 
-    def transform(self, ingest_time: datetime = None):
+    def transform(self):
         """
         Creates a pipeline to transform from ingest time to event on a daily time.
         :param ingest_time: the ingest time to parse - default to current time.
@@ -129,7 +128,6 @@ class TransformIngestTime2EventTime:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
 
             file_batch_controller = FileBatchController(dataset=dataset_source,
-                                                        ingest_time=ingest_time,
                                                         max_files=self.max_files)
 
             datalake_connector = DatalakeFileSource(dataset=dataset_source,
@@ -156,6 +154,3 @@ class TransformIngestTime2EventTime:
 
             logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
             file_batch_controller.save_state()
-
-            if ingest_time:
-                break

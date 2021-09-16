@@ -2,9 +2,7 @@
 Transforms data structured in the filesystem according to the ingress time to the event time for the data.
 The data gets accumulated based on the configured time resolution.
 """
-import argparse
 import sys
-from datetime import datetime
 
 from osiris.core.configuration import ConfigurationWithCredentials
 from osiris.core.enums import TimeResolution
@@ -18,15 +16,7 @@ credentials_config = configuration.get_credentials_config()
 logger = configuration.get_logger()
 
 
-def __init_argparse() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description='Transform from ingress time to event time accumulated based on \
-                                                 on the configured time resolution')
-
-    parser.add_argument('--ingress_time', type=str, default=None, help='the ingress time to start the ingress from.')
-
-    return parser
-
-
+# pylint: disable=too-many-locals
 def __get_pipeline() -> TransformIngestTime2EventTime:
     account_url = config['Azure Storage']['account_url']
     filesystem_name = config['Azure Storage']['filesystem_name']
@@ -71,18 +61,10 @@ def main():
     """
     The main function which runs the transformation.
     """
-    argparser = __init_argparse()
-    args, _ = argparser.parse_known_args()
     pipeline = __get_pipeline()
     logger.info('Running the ingress2event_time transformation.')
     try:
-        if args.ingress_time and args.ingress_time != '':
-            logger.info('Running ingress_time: %s', args.ingress_time)
-            ingress_time = datetime.strptime(args.ingress_time, '%Y-%m-%dT%H')
-            pipeline.transform(ingress_time)
-        else:
-            logger.info('Running default')
-            pipeline.transform()
+        pipeline.transform()
     except Exception as error:  # noqa pylint: disable=broad-except
         logger.error('Error occurred while running pipeline: %s', error)
         sys.exit(-1)
