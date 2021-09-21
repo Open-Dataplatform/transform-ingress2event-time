@@ -42,23 +42,33 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
         """
         date = pd.to_datetime(element[0])
         # we make sure there is no duplicates.
-        events = []
-        for event in element[1]:
-            if event not in events:
-                events.append(event)
+        # events = []
+        # for event in element[1]:
+        #     if event not in events:
+        #         events.append(event)
+        events_df = pd.DataFrame.from_dict(element[1])
 
         try:
             file_path = get_file_path_with_respect_to_time_resolution(date, self.time_resolution, 'data.parquet')
             file_content = self.datasets.read_file(file_path)
             processed_events_df = pd.read_parquet(BytesIO(file_content), engine='pyarrow')
-            processed_events = json.loads(processed_events_df.to_json(orient='records'))
 
-            for event in events:
-                if event not in processed_events:
-                    processed_events.append(event)
+            processed_events = pd.concat([processed_events_df, events_df], axis=0)
+            processed_events.drop_duplicates(inplace=True, ignore_index=True)
+
+            processed_events = json.loads(processed_events.to_json(orient='records'))
+
+            # processed_events = json.loads(processed_events_df.to_json(orient='records'))
+#
+            # for event in events:
+            #     if event not in processed_events:
+            #         processed_events.append(event)
 
             return [(date, processed_events)]
         except ResourceNotFoundError:
+            events_df.drop_duplicates(inplace=True, ignore_index=True)
+            events = json.loads(events_df.to_json(orient='records'))
+
             return [(date, events)]
 
 
