@@ -1,64 +1,23 @@
 """
 Module to handle pipeline for timeseries
 """
-import json
-from abc import ABC
-from io import BytesIO
-from typing import List, Tuple, Optional
+from typing import Optional
 
-import pandas as pd
 import apache_beam as beam
 import apache_beam.transforms.core as beam_core
 from apache_beam.options.pipeline_options import PipelineOptions
-from azure.core.exceptions import ResourceNotFoundError
 from osiris.core.azure_client_authorization import ClientAuthorization
 from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
-from osiris.core.io import get_file_path_with_respect_to_time_resolution, PrometheusClient
+from osiris.core.io import PrometheusClient
 from osiris.pipelines.azure_data_storage import Dataset
 from osiris.pipelines.file_io_connector import DatalakeFileSource, FileBatchController
-from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict
-
+from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict, \
+    JoinUniqueEventData
 
 configuration = Configuration(__file__)
 logger = configuration.get_logger()
-
-
-class _JoinUniqueEventData(beam_core.DoFn, ABC):
-    """"
-    Takes a list of events and join it with processed events, if such exists, for the particular event time.
-    It will only keep unique pairs.
-    """
-    def __init__(self, datasets: Dataset, time_resolution: TimeResolution):
-        super().__init__()
-
-        self.datasets = datasets
-        self.time_resolution = time_resolution
-
-    def process(self, element, *args, **kwargs) -> List[Tuple]:
-        """
-        Overwrites beam.DoFn process.
-        """
-        date = pd.to_datetime(element[0])
-        events_df = pd.DataFrame.from_dict(element[1])
-
-        try:
-            file_path = get_file_path_with_respect_to_time_resolution(date, self.time_resolution, 'data.parquet')
-            file_content = self.datasets.read_file(file_path)
-            processed_events_df = pd.read_parquet(BytesIO(file_content), engine='pyarrow')
-
-            processed_events = pd.concat([processed_events_df, events_df], axis=0)
-            processed_events.drop_duplicates(inplace=True, ignore_index=True)
-
-            processed_events = json.loads(processed_events.to_json(orient='records'))
-
-            return [(date, processed_events)]
-        except ResourceNotFoundError:
-            events_df.drop_duplicates(inplace=True, ignore_index=True)
-            events = json.loads(events_df.to_json(orient='records'))
-
-            return [(date, events)]
 
 
 class TransformIngestTime2EventTime:
@@ -145,8 +104,8 @@ class TransformIngestTime2EventTime:
                                                                                          self.date_format,  # noqa
                                                                                          self.time_resolution))  # noqa
                     | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(_JoinUniqueEventData(dataset_destination,  # noqa
-                                                                                   self.time_resolution))  # noqa
+                    | 'Merge from Storage' >> beam_core.ParDo(JoinUniqueEventData(dataset_destination,  # noqa
+                                                                                  self.time_resolution))  # noqa
                     | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(dataset_destination, # noqa
                                                                                       self.time_resolution))  # noqa
                 )

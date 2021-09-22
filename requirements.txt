@@ -1,4 +1,4 @@
 osiris-sdk
-apache-beam
+apache-beam==2.30.0
 pandas
 azure-storage-file-datalake
