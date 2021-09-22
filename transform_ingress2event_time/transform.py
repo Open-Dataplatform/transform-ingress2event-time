@@ -41,11 +41,6 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
         Overwrites beam.DoFn process.
         """
         date = pd.to_datetime(element[0])
-        # we make sure there is no duplicates.
-        # events = []
-        # for event in element[1]:
-        #     if event not in events:
-        #         events.append(event)
         events_df = pd.DataFrame.from_dict(element[1])
 
         try:
@@ -57,12 +52,6 @@ class _JoinUniqueEventData(beam_core.DoFn, ABC):
             processed_events.drop_duplicates(inplace=True, ignore_index=True)
 
             processed_events = json.loads(processed_events.to_json(orient='records'))
-
-            # processed_events = json.loads(processed_events_df.to_json(orient='records'))
-#
-            # for event in events:
-            #     if event not in processed_events:
-            #         processed_events.append(event)
 
             return [(date, processed_events)]
         except ResourceNotFoundError:
