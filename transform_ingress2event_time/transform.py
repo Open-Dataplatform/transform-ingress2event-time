@@ -10,6 +10,7 @@ from osiris.core.azure_client_authorization import ClientAuthorization
 from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
+from osiris.core.instrumentation import TracerClass, TracerConfig, TracerDoFn
 from osiris.core.io import PrometheusClient
 from osiris.pipelines.azure_data_storage import Dataset
 from osiris.pipelines.file_io_connector import DatalakeFileSource, FileBatchController
@@ -28,6 +29,7 @@ class TransformIngestTime2EventTime:
     def __init__(self, storage_account_url: str, filesystem_name: str, tenant_id: str, client_id: str,
                  client_secret: str, source_dataset_guid: str, destination_dataset_guid: str, date_format: str,
                  date_key_name: str, time_resolution: TimeResolution, max_files: int,
+                 tracer_config: TracerConfig,
                  prometheus_client: Optional[PrometheusClient] = None):
         """
         :param storage_account_url: The URL to Azure storage account.
@@ -41,6 +43,7 @@ class TransformIngestTime2EventTime:
         :param date_key_name: The key in the record containing the date.
         :param time_resolution: The time resolution to store the data in the destination dataset with.
         :param max_files: Number of files to process in every pipeline run.
+        :param tracer_config: Configuration of Jaeger Tracer
         :param prometheus_client: An optional Prometheus Client to generate metrics
         """
         if None in [storage_account_url, filesystem_name, tenant_id, client_id, client_secret, source_dataset_guid,
@@ -58,6 +61,7 @@ class TransformIngestTime2EventTime:
         self.date_format = date_format
         self.date_key_name = date_key_name
         self.max_files = max_files
+        self.tracer_config = tracer_config
         self.prometheus_client = prometheus_client
 
     def transform(self):
@@ -66,6 +70,8 @@ class TransformIngestTime2EventTime:
         :param ingest_time: the ingest time to parse - default to current time.
         """
         logger.info('Initializing TransformIngestTime2EventTime.transform')
+        tracer = TracerClass(self.tracer_config)
+
         client_auth = ClientAuthorization(tenant_id=self.tenant_id,
                                           client_id=self.client_id,
                                           client_secret=self.client_secret)
@@ -84,31 +90,49 @@ class TransformIngestTime2EventTime:
 
         while True:
             logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
+            with tracer.start_span('Process batch') as span:
+                carrier_ctx = tracer.get_carrier(span)
 
-            file_batch_controller = FileBatchController(dataset=dataset_source,
-                                                        max_files=self.max_files)
+                with tracer.start_span('FileBatchController', child_of=span) as span_files:
+                    file_batch_controller = FileBatchController(dataset=dataset_source,
+                                                                max_files=self.max_files)
 
-            datalake_connector = DatalakeFileSource(dataset=dataset_source,
-                                                    file_paths=file_batch_controller.get_batch())
+                    paths = file_batch_controller.get_batch()
+                    for path in paths:
+                        span_files.set_tag('path', path)
 
-            if datalake_connector.estimate_size() == 0:
-                logger.info('TransformIngestTime2EventTime.transform: break while-loop')
-                break
+                datalake_connector = DatalakeFileSource(dataset=dataset_source,
+                                                        file_paths=file_batch_controller.get_batch())
 
-            with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
-                _ = (
-                    pipeline  # noqa
-                    | 'Read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
-                    | 'Convert to dict' >> beam_core.ParDo(ConvertToDict())  # noqa
-                    | 'Create tuple for elements' >> beam_core.ParDo(ConvertEventToTuple(self.date_key_name,  # noqa
-                                                                                         self.date_format,  # noqa
-                                                                                         self.time_resolution))  # noqa
-                    | 'Group by date' >> beam_core.GroupByKey()  # noqa
-                    | 'Merge from Storage' >> beam_core.ParDo(JoinUniqueEventData(dataset_destination,  # noqa
-                                                                                  self.time_resolution))  # noqa
-                    | 'Write to Storage' >> beam_core.ParDo(UploadEventsToDestination(dataset_destination, # noqa
-                                                                                      self.time_resolution))  # noqa
-                )
+                if datalake_connector.estimate_size() == 0:
+                    logger.info('TransformIngestTime2EventTime.transform: break while-loop')
+                    break
 
-            logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
-            file_batch_controller.save_state()
+                with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
+                    _ = (
+                        pipeline  # noqa
+                        | 'Read from filesystem' >> beam.io.Read(datalake_connector)  # noqa
+                        | 'Convert to dict' >> beam_core.ParDo(TracerDoFn(ConvertToDict(),  # noqa
+                                                                          carrier_ctx=carrier_ctx))  # noqa
+                        | 'Tuple elements' >> beam_core.ParDo(TracerDoFn(ConvertEventToTuple(self.date_key_name,  # noqa
+                                                                                             self.date_format,  # noqa
+                                                                                             self.time_resolution),
+                                                                         carrier_ctx=carrier_ctx))  # noqa
+                        | 'Group by date' >> beam_core.GroupByKey()  # noqa
+                        | 'Merge Storage' >> beam_core.ParDo(TracerDoFn(JoinUniqueEventData(dataset_destination,  # noqa
+                                                                                            self.time_resolution),
+                                                                        carrier_ctx=carrier_ctx,
+                                                                        tag_index=0,
+                                                                        tag_name='merge_time'))  # noqa
+                        | 'Write Blob' >> beam_core.ParDo(TracerDoFn(UploadEventsToDestination(dataset_destination, # noqa pylint: disable=line-too-long
+                                                                                               self.time_resolution),
+                                                                     carrier_ctx=carrier_ctx,
+                                                                     tag_index=1,
+                                                                     tag_name='upload_dest'))  # noqa
+                    )
+
+                logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
+                file_batch_controller.save_state()
+
+        tracer.close()
+        logger.info('TransformNeptun.transform: Returning')

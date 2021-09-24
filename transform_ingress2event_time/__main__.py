@@ -3,9 +3,11 @@ Transforms data structured in the filesystem according to the ingress time to th
 The data gets accumulated based on the configured time resolution.
 """
 import sys
+import logging
 
 from osiris.core.configuration import ConfigurationWithCredentials
 from osiris.core.enums import TimeResolution
+from osiris.core.instrumentation import TracerConfig
 from osiris.core.io import PrometheusClient
 
 from .transform import TransformIngestTime2EventTime
@@ -32,6 +34,10 @@ def __get_pipeline() -> TransformIngestTime2EventTime:
     time_resolution = TimeResolution[config['Datasets']['time_resolution']]
     max_files = int(config['Pipeline']['max_files'])
 
+    tracer_config = TracerConfig(config['Jaeger Agent']['name'],
+                                 config['Jaeger Agent']['reporting_host'],
+                                 config['Jaeger Agent']['reporting_port'])
+
     prometheus_hostname = config['Prometheus']['hostname']
     prometheus_environment = config['Prometheus']['environment']
     prometheus_name = config['Prometheus']['name']
@@ -51,6 +57,7 @@ def __get_pipeline() -> TransformIngestTime2EventTime:
                                              date_key_name=date_key_name,
                                              time_resolution=time_resolution,
                                              max_files=max_files,
+                                             tracer_config=tracer_config,
                                              prometheus_client=prometheus_client)
     except Exception as error:  # noqa pylint: disable=broad-except
         logger.error('Error occurred while initializing pipeline: %s', error)
@@ -62,6 +69,16 @@ def main():
     The main function which runs the transformation.
     """
     pipeline = __get_pipeline()
+    # To disable azure INFO logging from Azure
+    logger_labels = ['apache_beam.runners.portability.fn_api_runner.fn_runner',
+                     'azure.core.pipeline.policies.http_logging_policy',
+                     'azure.identity._internal.get_token_mixin',
+                     'apache_beam.runners.portability.fn_api_runner.translations',
+                     'apache_beam.runners.worker.statecache',
+                     'apache_beam.runners.portability.fn_api_runner.worker_handlers']
+    for logger_label in logger_labels:
+        logging.getLogger(logger_label).setLevel(logging.WARNING)
+
     logger.info('Running the ingress2event_time transformation.')
     try:
         pipeline.transform()

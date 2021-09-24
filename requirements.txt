@@ -1,4 +1,6 @@
 osiris-sdk
-apache-beam==2.30.0
+apache-beam==2.32.0
 pandas
 azure-storage-file-datalake
+jaeger_client
+opentracing
