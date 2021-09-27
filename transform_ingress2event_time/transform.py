@@ -124,10 +124,10 @@ class TransformIngestTime2EventTime:
                                                                         carrier_ctx=carrier_ctx,
                                                                         tag_index=0,
                                                                         tag_name='merge_time'))  # noqa
-                        | 'Write Blob' >> beam_core.ParDo(TracerDoFn(UploadEventsToDestination(dataset_destination, # noqa pylint: disable=line-too-long
+                        | 'Write Blob' >> beam_core.ParDo(TracerDoFn(UploadEventsToDestination(dataset_destination,  # noqa pylint: disable=line-too-long
                                                                                                self.time_resolution),
                                                                      carrier_ctx=carrier_ctx,
-                                                                     tag_index=1,
+                                                                     tag_index=0,
                                                                      tag_name='upload_dest'))  # noqa
                     )
 
