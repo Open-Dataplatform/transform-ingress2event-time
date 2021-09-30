@@ -1,13 +1,13 @@
 """
 Module to handle pipeline for timeseries
 """
+import logging
 from typing import Optional
 
 import apache_beam as beam
 import apache_beam.transforms.core as beam_core
 from apache_beam.options.pipeline_options import PipelineOptions
 from osiris.core.azure_client_authorization import ClientAuthorization
-from osiris.core.configuration import Configuration
 
 from osiris.core.enums import TimeResolution
 from osiris.core.instrumentation import TracerClass, TracerConfig, TracerDoFn
@@ -17,8 +17,8 @@ from osiris.pipelines.file_io_connector import DatalakeFileSource, FileBatchCont
 from osiris.pipelines.transformations import ConvertEventToTuple, UploadEventsToDestination, ConvertToDict, \
     JoinUniqueEventData
 
-configuration = Configuration(__file__)
-logger = configuration.get_logger()
+
+logger = logging.getLogger(__file__)
 
 
 class TransformIngestTime2EventTime:
