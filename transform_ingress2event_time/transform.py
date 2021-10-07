@@ -104,7 +104,7 @@ class TransformIngestTime2EventTime:
                     span.set_tag('path', path)
 
                 datalake_connector = DatalakeFileSource(dataset=dataset_source,
-                                                        file_paths=file_batch_controller.get_batch())
+                                                        file_paths=paths)
 
                 with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
                     _ = (
