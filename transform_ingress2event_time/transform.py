@@ -1,5 +1,6 @@
 """
-Module to handle pipeline for timeseries
+Module to handle pipeline for time series.
+Transforming from ingest time (ingress) to event time (egress)
 """
 import logging
 from typing import Optional
@@ -66,8 +67,9 @@ class TransformIngestTime2EventTime:
 
     def transform(self):
         """
-        Creates a pipeline to transform from ingest time to event on a daily time.
-        :param ingest_time: the ingest time to parse - default to current time.
+        Creates a pipeline to transform from ingest time (ingress) to event on a daily time (egress).
+
+        It runs in batches of max_files and iterates until no more files to process in ingress.
         """
         logger.info('Initializing TransformIngestTime2EventTime.transform')
         tracer = TracerClass(self.tracer_config)
