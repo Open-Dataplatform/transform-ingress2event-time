@@ -32,16 +32,13 @@ def __get_pipeline(config, credentials_config) -> TransformIngestTime2EventTime:
     time_resolution = TimeResolution[config['Datasets']['time_resolution']]
     max_files = int(config['Pipeline']['max_files'])
 
-    tracer_config = TracerConfig(config['Jaeger Agent']['name'],
-                                 config['Jaeger Agent']['reporting_host'],
-                                 config['Jaeger Agent']['reporting_port'])
+    tracer_config = TracerConfig(service_name=config['Jaeger Agent']['name'],
+                                 reporting_host=config['Jaeger Agent']['reporting_host'],
+                                 reporting_port=config['Jaeger Agent']['reporting_port'])
 
-    prometheus_hostname = config['Prometheus']['hostname']
-    prometheus_environment = config['Prometheus']['environment']
-    prometheus_name = config['Prometheus']['name']
-    prometheus_client = PrometheusClient(environment=prometheus_environment,
-                                         name=prometheus_name,
-                                         hostname=prometheus_hostname)
+    prometheus_client = PrometheusClient(environment=config['Prometheus']['environment'],
+                                         name=config['Prometheus']['name'],
+                                         hostname=config['Prometheus']['hostname'])
 
     try:
         return TransformIngestTime2EventTime(storage_account_url=account_url,
