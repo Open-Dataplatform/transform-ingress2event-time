@@ -88,25 +88,21 @@ class TransformIngestTime2EventTime:
                                       guid=self.destination_dataset_guid,
                                       prometheus_client=self.prometheus_client)
 
-        while True:
-            logger.info('TransformIngestTime2EventTime.transform: while - init datalake_connector')
-            with tracer.start_span('Process batch') as span:
+        file_batch_controller = FileBatchController(dataset=dataset_source,
+                                                    max_files=self.max_files)
+
+        while file_batch_controller.more_files_to_process():
+            logger.info('TransformIngestTime2EventTime.transform: start batch')
+
+            with tracer.start_span('Batch') as span:
                 carrier_ctx = tracer.get_carrier(span)
 
-                with tracer.start_span('FileBatchController', child_of=span) as span_files:
-                    file_batch_controller = FileBatchController(dataset=dataset_source,
-                                                                max_files=self.max_files)
-
-                    paths = file_batch_controller.get_batch()
-                    for path in paths:
-                        span_files.set_tag('path', path)
+                paths = file_batch_controller.get_batch()
+                for path in paths:
+                    span.set_tag('path', path)
 
                 datalake_connector = DatalakeFileSource(dataset=dataset_source,
                                                         file_paths=file_batch_controller.get_batch())
-
-                if datalake_connector.estimate_size() == 0:
-                    logger.info('TransformIngestTime2EventTime.transform: break while-loop')
-                    break
 
                 with beam.Pipeline(options=PipelineOptions(['--runner=DirectRunner'])) as pipeline:
                     _ = (
@@ -131,8 +127,8 @@ class TransformIngestTime2EventTime:
                                                                      tag_name='upload_dest'))  # noqa
                     )
 
-                logger.info('TransformIngestTime2EventTime.transform: beam-pipeline finished')
+                logger.info('TransformIngestTime2EventTime.transform: batch processed and saving state')
                 file_batch_controller.save_state()
 
         tracer.close()
-        logger.info('TransformNeptun.transform: Returning')
+        logger.info('TransformIngestTime2EventTime.transform: Finished')
