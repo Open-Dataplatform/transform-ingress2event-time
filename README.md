@@ -20,7 +20,7 @@ transformation will process data from that hour and the previous hour.
 
 ### Usage
 ```sh
-$ python -m transform_ingress2event_time.transform [--ingresss_time %Y-%m-%dT%H']
+$ python -m transform_ingress2event_time.transform
 ```
 
 
