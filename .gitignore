@@ -130,6 +130,7 @@ dmypy.json
 
 # Configurations
 conf.ini
+credentials.ini
 
 # IDE
 .idea/

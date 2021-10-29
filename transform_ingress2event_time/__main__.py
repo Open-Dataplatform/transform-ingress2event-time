@@ -5,6 +5,7 @@ The data gets accumulated based on the configured time resolution.
 import sys
 import logging
 import logging.config
+import argparse
 from configparser import ConfigParser
 
 from osiris.core.enums import TimeResolution
@@ -14,6 +15,16 @@ from osiris.core.io import PrometheusClient
 from .transform import TransformIngestTime2EventTime
 
 logger = logging.getLogger(__file__)
+
+
+def __init_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Transform from ingress time to event time accumulated based on \
+                                                 on the configured time resolution')
+
+    parser.add_argument('--conf', type=str, default='conf.ini', help='setting the configuration file')
+    parser.add_argument('--credentials', type=str, default='credentials.ini', help='setting the credential file')
+
+    return parser
 
 
 # pylint: disable=too-many-locals
@@ -63,10 +74,12 @@ def main():
     """
     The main function which runs the transformation.
     """
+    arg_parser = __init_argparse()
+    args, _ = arg_parser.parse_known_args()
     config = ConfigParser()
-    config.read(['conf.ini', '/etc/osiris/conf.ini'])
+    config.read(args.conf)
     credentials_config = ConfigParser()
-    credentials_config.read(['credentials.ini', '/vault/secrets/credentials.ini'])
+    credentials_config.read(args.credentials)
 
     logging.config.fileConfig(fname=config['Logging']['configuration_file'],  # type: ignore
                               disable_existing_loggers=False)
@@ -74,13 +87,8 @@ def main():
     pipeline = __get_pipeline(config=config, credentials_config=credentials_config)
 
     # To disable azure INFO logging from Azure
-    logger_labels = ['apache_beam.runners.portability.fn_api_runner.fn_runner',
-                     'azure.core.pipeline.policies.http_logging_policy',
-                     'azure.identity._internal.get_token_mixin',
-                     'apache_beam.runners.portability.fn_api_runner.translations',
-                     'apache_beam.runners.worker.statecache',
-                     'apache_beam.runners.portability.fn_api_runner.worker_handlers']
-    for logger_label in logger_labels:
+    disable_logger_labels = config['Logging']['disable_logger_labels'].splitlines()
+    for logger_label in disable_logger_labels:
         logging.getLogger(logger_label).setLevel(logging.WARNING)
 
     logger.info('Running the ingress2event_time transformation.')
