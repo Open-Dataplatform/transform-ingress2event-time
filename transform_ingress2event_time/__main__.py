@@ -2,7 +2,6 @@
 Transforms data structured in the filesystem according to the ingress time to the event time for the data.
 The data gets accumulated based on the configured time resolution.
 """
-import sys
 import logging
 import logging.config
 import argparse
