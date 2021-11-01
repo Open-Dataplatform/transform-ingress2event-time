@@ -51,23 +51,19 @@ def __get_pipeline(config, credentials_config) -> TransformIngestTime2EventTime:
                                          name=config['Prometheus']['name'],
                                          hostname=config['Prometheus']['hostname'])
 
-    try:
-        return TransformIngestTime2EventTime(storage_account_url=account_url,
-                                             filesystem_name=filesystem_name,
-                                             tenant_id=tenant_id,
-                                             client_id=client_id,
-                                             client_secret=client_secret,
-                                             source_dataset_guid=source,
-                                             destination_dataset_guid=destination,
-                                             date_format=date_format,
-                                             date_key_name=date_key_name,
-                                             time_resolution=time_resolution,
-                                             max_files=max_files,
-                                             tracer_config=tracer_config,
-                                             prometheus_client=prometheus_client)
-    except Exception as error:  # noqa pylint: disable=broad-except
-        logger.error('Error occurred while initializing pipeline: %s', error)
-        sys.exit(-1)
+    return TransformIngestTime2EventTime(storage_account_url=account_url,
+                                         filesystem_name=filesystem_name,
+                                         tenant_id=tenant_id,
+                                         client_id=client_id,
+                                         client_secret=client_secret,
+                                         source_dataset_guid=source,
+                                         destination_dataset_guid=destination,
+                                         date_format=date_format,
+                                         date_key_name=date_key_name,
+                                         time_resolution=time_resolution,
+                                         max_files=max_files,
+                                         tracer_config=tracer_config,
+                                         prometheus_client=prometheus_client)
 
 
 def main():
@@ -92,11 +88,8 @@ def main():
         logging.getLogger(logger_label).setLevel(logging.WARNING)
 
     logger.info('Running the ingress2event_time transformation.')
-    try:
-        pipeline.transform()
-    except Exception as error:  # noqa pylint: disable=broad-except
-        logger.error('Error occurred while running pipeline: %s', error)
-        sys.exit(-1)
+
+    pipeline.transform()
 
     logger.info('Finished running the ingress2event_time transformation.')
 
