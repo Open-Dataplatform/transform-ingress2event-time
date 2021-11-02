@@ -1,0 +1,21 @@
+name: Mypy
+
+on:
+  # Triggers the workflow on pull request events but only for the main branch
+  pull_request:
+    branches:
+      - main
+      - test
+
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Open-Dataplatform/gha-python-test-setup@v1
+        with:
+          python-version: 3.8
+          tox-version: 3.24.4
+      - name: Analysing the code with mypy
+        run: |
+          tox -e mypy
+

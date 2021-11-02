@@ -1,0 +1,20 @@
+name: Pytest
+
+on:
+  # Triggers the workflow on pull request events but only for the main branch
+  pull_request:
+    branches:
+      - main
+      - test
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Open-Dataplatform/gha-python-test-setup@v1
+        with:
+          python-version: 3.8
+          tox-version: 3.24.4
+      - name: Analysing the code with pytest
+        run: |
+          tox -e pytest
