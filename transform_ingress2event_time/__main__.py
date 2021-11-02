@@ -92,11 +92,6 @@ def main():
         for logger_label in disable_logger_labels:
             logging.getLogger(logger_label).setLevel(logging.WARNING)
 
-    # To disable azure INFO logging from Azure
-    disable_logger_labels = config['Logging']['disable_logger_labels'].splitlines()
-    for logger_label in disable_logger_labels:
-        logging.getLogger(logger_label).setLevel(logging.WARNING)
-
     logger.info('Running the ingress2event_time transformation.')
 
     pipeline = __get_pipeline(config=config, credentials_config=credentials_config)
