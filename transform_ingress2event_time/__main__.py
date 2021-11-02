@@ -2,7 +2,6 @@
 Transforms data structured in the filesystem according to the ingress time to the event time for the data.
 The data gets accumulated based on the configured time resolution.
 """
-import sys
 import logging
 import logging.config
 import argparse
@@ -21,8 +20,14 @@ def __init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Transform from ingress time to event time accumulated based on \
                                                  on the configured time resolution')
 
-    parser.add_argument('--conf', type=str, default='conf.ini', help='setting the configuration file')
-    parser.add_argument('--credentials', type=str, default='credentials.ini', help='setting the credential file')
+    parser.add_argument('--conf',
+                        nargs='+',
+                        default=['conf.ini', '/etc/osiris/conf.ini'],
+                        help='setting the configuration file')
+    parser.add_argument('--credentials',
+                        nargs='+',
+                        default=['credentials.ini', '/vault/secrets/credentials.ini'],
+                        help='setting the credential file')
 
     return parser
 
@@ -51,23 +56,19 @@ def __get_pipeline(config, credentials_config) -> TransformIngestTime2EventTime:
                                          name=config['Prometheus']['name'],
                                          hostname=config['Prometheus']['hostname'])
 
-    try:
-        return TransformIngestTime2EventTime(storage_account_url=account_url,
-                                             filesystem_name=filesystem_name,
-                                             tenant_id=tenant_id,
-                                             client_id=client_id,
-                                             client_secret=client_secret,
-                                             source_dataset_guid=source,
-                                             destination_dataset_guid=destination,
-                                             date_format=date_format,
-                                             date_key_name=date_key_name,
-                                             time_resolution=time_resolution,
-                                             max_files=max_files,
-                                             tracer_config=tracer_config,
-                                             prometheus_client=prometheus_client)
-    except Exception as error:  # noqa pylint: disable=broad-except
-        logger.error('Error occurred while initializing pipeline: %s', error)
-        sys.exit(-1)
+    return TransformIngestTime2EventTime(storage_account_url=account_url,
+                                         filesystem_name=filesystem_name,
+                                         tenant_id=tenant_id,
+                                         client_id=client_id,
+                                         client_secret=client_secret,
+                                         source_dataset_guid=source,
+                                         destination_dataset_guid=destination,
+                                         date_format=date_format,
+                                         date_key_name=date_key_name,
+                                         time_resolution=time_resolution,
+                                         max_files=max_files,
+                                         tracer_config=tracer_config,
+                                         prometheus_client=prometheus_client)
 
 
 def main():
@@ -76,6 +77,7 @@ def main():
     """
     arg_parser = __init_argparse()
     args, _ = arg_parser.parse_known_args()
+
     config = ConfigParser()
     config.read(args.conf)
     credentials_config = ConfigParser()
@@ -84,19 +86,16 @@ def main():
     logging.config.fileConfig(fname=config['Logging']['configuration_file'],  # type: ignore
                               disable_existing_loggers=False)
 
-    pipeline = __get_pipeline(config=config, credentials_config=credentials_config)
-
     # To disable azure INFO logging from Azure
-    disable_logger_labels = config['Logging']['disable_logger_labels'].splitlines()
-    for logger_label in disable_logger_labels:
-        logging.getLogger(logger_label).setLevel(logging.WARNING)
+    if config.has_option('Logging', 'disable_logger_labels'):
+        disable_logger_labels = config['Logging']['disable_logger_labels'].splitlines()
+        for logger_label in disable_logger_labels:
+            logging.getLogger(logger_label).setLevel(logging.WARNING)
 
     logger.info('Running the ingress2event_time transformation.')
-    try:
-        pipeline.transform()
-    except Exception as error:  # noqa pylint: disable=broad-except
-        logger.error('Error occurred while running pipeline: %s', error)
-        sys.exit(-1)
+
+    pipeline = __get_pipeline(config=config, credentials_config=credentials_config)
+    pipeline.transform()
 
     logger.info('Finished running the ingress2event_time transformation.')
 
