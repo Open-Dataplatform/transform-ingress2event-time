@@ -1,3 +1,10 @@
+[![Pylint](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/pylint.yml/badge.svg)](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/pylint.yml)
+[![Bandit](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/bandit.yml/badge.svg)](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/bandit.yml)
+[![Flake8](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/flake8.yml/badge.svg)](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/flake8.yml)
+[![Mypy](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/mypy.yml/badge.svg)](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/mypy.yml)
+[![Pytest](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/pytest.yml/badge.svg)](https://github.com/Open-Dataplatform/transform-ingress2event-time/actions/workflows/pytest.yml)
+
+
 # transform-ingress2event-time <!-- omit in toc -->
 - [Introduction](#introduction)
 - [Configuration](#configuration)
